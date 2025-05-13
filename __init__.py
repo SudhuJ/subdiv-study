@@ -1,19 +1,23 @@
 bl_info = {
     "name": "Subdivision Methods",
-    "author": "Your Name",
-    "version": (1, 0, 0),
-    "blender": (3, 0, 0),
-    "location": "View3D > UI > Subdiv",
-    "description": "Advanced subdivision surface algorithms",
+    "author": "Sudhanva Joshi",
+    "version": (1, 0),
+    "blender": (4, 0, 0),
+    "location": "View3D > Sidebar > Tool",
+    "description": "Apply subdivision algorithms with customizable levels",
+    "warning": "",
+    "doc_url": "",
     "category": "Mesh",
 }
 
-from . import operators, ui
+from . import operators
+from . import panels
 
 def register():
-    operators.register()
-    ui.register()
+    operators.register()  # Register the operators
+    panels.register()  # Register the panels
 
 def unregister():
-    ui.unregister()
-    operators.unregister()
+    panels.unregister()  # Unregister the panels
+    operators.unregister()  # Unregister the operators
+

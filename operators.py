@@ -1,54 +1,80 @@
+# operators.py
 import bpy
-from .algorithms.utils import apply_subdivision
+from .algorithms import loop, doosabin, root3
 
-class OBJECT_OT_ApplySubdivision(bpy.types.Operator):
-    bl_idname = "object.apply_subdivision"
+class SUBDIV_OT_apply_subdivision(bpy.types.Operator):
+    bl_idname = "subdiv.apply_subdivision"
     bl_label = "Apply Subdivision"
-    bl_options = {'REGISTER', 'UNDO'}
 
-    algorithm: bpy.props.EnumProperty(
-        name="Algorithm",
-        items=[
-            ('CATMULL_CLARK', "Catmull-Clark", "Standard subdivision algorithm"),
-            ('DOO_SABIN', "Doo-Sabin", "Preserves face shapes better"),
-        ],
-        default='CATMULL_CLARK'
-    )
-
-    iterations: bpy.props.IntProperty(
-        name="Iterations",
-        description="Number of subdivision iterations",
-        min=1,
-        max=6,
-        default=1
-    )
+    @classmethod
+    def poll(cls, context):
+        return (context.active_object and context.active_object.type == 'MESH')
 
     def execute(self, context):
-        obj = context.object
-        if not obj or obj.type != 'MESH':
-            self.report({'ERROR'}, "Select a mesh object")
-            return {'CANCELLED'}
+        obj = context.active_object
+        wm = context.window_manager
+
+        method = wm.subdiv_method
+        levels = wm.subdiv_levels
+
+        # Ensure the object is selected and active
+        bpy.ops.object.mode_set(mode='OBJECT')
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+
+        current_mode = obj.mode
 
         try:
-            original_name = obj.data.name
-            new_mesh = apply_subdivision(obj.data, self.algorithm, self.iterations)
-            new_obj = bpy.data.objects.new(f"{obj.name}_subdivided", new_mesh)
-            new_obj.matrix_world = obj.matrix_world
-            
-            # Link to collection and set selection
-            context.collection.objects.link(new_obj)
-            bpy.ops.object.select_all(action='DESELECT')
-            new_obj.select_set(True)
-            context.view_layer.objects.active = new_obj
-            
-            self.report({'INFO'}, f"Applied {self.algorithm} subdivision")
-            return {'FINISHED'}
+            # Apply subdivision in Object Mode
+            bpy.ops.object.mode_set(mode='OBJECT')  # Switch to Object Mode if in Edit Mode
+
+            if method == 'CATMULL_CLARK':
+                mod = obj.modifiers.new(name="Subdiv", type='SUBSURF')
+                mod.levels = levels
+                mod.render_levels = levels
+                mod.subdivision_type = 'CATMULL_CLARK'
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+
+            elif method == 'SIMPLE':
+                mod = obj.modifiers.new(name="SimpleSubdiv", type='SUBSURF')
+                mod.levels = levels
+                mod.render_levels = levels
+                mod.subdivision_type = 'SIMPLE'
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+
+            elif method == 'DOO_SABIN':
+                success, msg = doosabin.doosabin_subdivide(obj, levels)
+                if not success:
+                    self.report({'ERROR'}, msg)
+                    return {'CANCELLED'}
+
+            elif method == 'LOOP':
+                success, msg = loop.loop_subdivide(obj, levels)
+                if not success:
+                    self.report({'ERROR'}, msg)
+                    return {'CANCELLED'}
+
+            elif method == 'ROOT3':
+                success, msg = root3.root3_subdivide(obj, levels)
+                if not success:
+                    self.report({'ERROR'}, msg)
+                    return {'CANCELLED'}
+
         except Exception as e:
-            self.report({'ERROR'}, str(e))
+            self.report({'ERROR'}, f"Subdivision failed: {str(e)}")
             return {'CANCELLED'}
 
+        finally:
+            # Always return to original mode
+            bpy.ops.object.mode_set(mode=current_mode)
+
+        self.report({'INFO'}, f"Applied {method} subdivision ({levels} levels)")
+        return {'FINISHED'}
+
 def register():
-    bpy.utils.register_class(OBJECT_OT_ApplySubdivision)
+    """Register the operator"""
+    bpy.utils.register_class(SUBDIV_OT_apply_subdivision)
 
 def unregister():
-    bpy.utils.unregister_class(OBJECT_OT_ApplySubdivision)
+    """Unregister the operator"""
+    bpy.utils.unregister_class(SUBDIV_OT_apply_subdivision)
