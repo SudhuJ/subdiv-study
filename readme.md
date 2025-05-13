@@ -1,9 +1,6 @@
 # Blender Subdivision Addon
 
-This addon implements advanced subdivision surface algorithms in Blender, providing alternatives to Blender's native subdivision modifier. It includes:
-
-1. **Catmull-Clark Subdivision** (standard smoothing)
-2. **Doo-Sabin Subdivision** (face-preserving)
+This addon implements advanced subdivision surface algorithms in Blender, providing alternatives to Blender's native subdivision modifier.
 
 ## Features
 - **Non-destructive workflow**: Creates new subdivided objects while keeping originals
@@ -20,6 +17,8 @@ This addon implements advanced subdivision surface algorithms in Blender, provid
 3. Choose iterations and click your preferred algorithm:
    - **Catmull-Clark**: Smooths surfaces
    - **Doo-Sabin**: Better preserves face shapes
+   - **Loop**: Works for triangulated meshes
+   - **Root3**: Non-Standard Implementation
 
 ## Requirements
 - Blender 3.0+
